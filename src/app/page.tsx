@@ -95,12 +95,14 @@ export default async function DashboardPage() {
                   View 23 Products
                 </Button>
               </Link>
-              <Link href="/forms/new">
-                <Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100 shadow-sm font-semibold rounded-xl h-11 px-5 text-sm">
-                  <PlusCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                  Create Order Form
-                </Button>
-              </Link>
+              {forms.length > 0 && (
+                <Link href={`/f/${forms[0].id}`} target="_blank">
+                  <Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100 shadow-sm font-semibold rounded-xl h-11 px-5 text-sm">
+                    <ExternalLink className="mr-2 h-4 w-4 text-indigo-600" />
+                    Open Live Order Form
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -317,11 +319,7 @@ export default async function DashboardPage() {
             {/* Forms section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Your Forms</h3>
-                <Link href="/forms/new" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold inline-flex items-center gap-1">
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  <span>New</span>
-                </Link>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Active Order Form</h3>
               </div>
 
               <div className="space-y-2.5">

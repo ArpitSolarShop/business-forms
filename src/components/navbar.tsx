@@ -20,8 +20,7 @@ export function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { label: 'RFQ Inbox', href: '/', icon: Inbox },
-    { label: 'Form Builder', href: '/forms/new', icon: PlusCircle },
+    { label: 'Orders & PI', href: '/', icon: Inbox },
     { label: 'Product Catalog', href: '/products', icon: Package },
   ];
 
@@ -38,10 +37,10 @@ export function Navbar() {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold tracking-tight text-slate-900 text-base">BusinessForms</span>
-                  <Badge variant="purple" className="text-[10px] px-1.5 py-0 font-medium">B2B Pro</Badge>
+                  <span className="font-bold tracking-tight text-slate-900 text-base">OrderPortal</span>
+                  <Badge variant="purple" className="text-[10px] px-1.5 py-0 font-medium bg-purple-100 text-purple-700">B2B Pro</Badge>
                 </div>
-                <span className="text-[11px] text-slate-500 font-medium -mt-0.5">Arpit Solar & Electricals</span>
+                <span className="text-[11px] text-slate-500 font-medium -mt-0.5">Krishnanuja Renewables</span>
               </div>
             </Link>
 
@@ -49,7 +48,7 @@ export function Navbar() {
             <nav className="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-slate-200">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || (item.href === '/' && pathname.startsWith('/responses'));
                 return (
                   <Link
                     key={item.href}
@@ -79,15 +78,6 @@ export function Navbar() {
               <span>Catalog Active • 23 Items</span>
             </Link>
 
-            {/* New Form CTA */}
-            {pathname !== '/forms/new' && (
-              <Link href="/forms/new">
-                <Button size="sm" className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-sm shadow-indigo-100 rounded-lg h-9 px-3.5 font-medium text-xs">
-                  <PlusCircle className="h-4 w-4" />
-                  <span>Create Form</span>
-                </Button>
-              </Link>
-            )}
 
             {/* Notifications */}
             <button 
