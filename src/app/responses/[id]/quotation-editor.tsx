@@ -74,6 +74,7 @@ export function QuotationEditor({
 
   // Live recalculations
   let subtotal = 0;
+  let totalGst = 0;
   let totalUnits = 0;
 
   const calculatedItems = initialItems.map(item => {
@@ -81,6 +82,10 @@ export function QuotationEditor({
     const lineTotal = rate * item.qty;
     subtotal += lineTotal;
     totalUnits += item.qty;
+    
+    // Accurate GST per item based on actual product config
+    const lineGst = lineTotal * (item.gstPercent / 100);
+    totalGst += lineGst;
 
     return {
       ...item,
@@ -89,9 +94,8 @@ export function QuotationEditor({
     };
   });
 
-  const cgst = subtotal * 0.09;
-  const sgst = subtotal * 0.09;
-  const totalGst = cgst + sgst;
+  const cgst = totalGst / 2;
+  const sgst = totalGst / 2;
   const grandTotal = subtotal + totalGst;
 
   const handleStatusChange = async (newStatus: string) => {

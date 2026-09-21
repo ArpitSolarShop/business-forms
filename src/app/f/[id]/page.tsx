@@ -98,6 +98,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
     let subtotal = 0;
     let itemsCount = 0;
     let unitsCount = 0;
+    let totalGst = 0;
 
     Object.entries(cart).forEach(([id, qty]) => {
       if (qty <= 0) return;
@@ -105,13 +106,17 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
       if (product) {
         itemsCount += 1;
         unitsCount += qty;
-        subtotal += product.baseRate * qty;
+        
+        const lineBase = product.baseRate * qty;
+        subtotal += lineBase;
+        
+        // Exact GST based on actual configured percentage
+        totalGst += lineBase * (product.gstPercent / 100);
       }
     });
 
-    const cgst = subtotal * 0.09;
-    const sgst = subtotal * 0.09;
-    const totalGst = cgst + sgst;
+    const cgst = totalGst / 2;
+    const sgst = totalGst / 2;
     const grandTotal = subtotal + totalGst;
 
     return { 
