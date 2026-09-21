@@ -18,6 +18,7 @@ import {
 type ProductItem = {
   id: string;
   name: string;
+  description?: string | null;
   sku: string;
   category: string;
   unit: string;
@@ -320,6 +321,11 @@ export function QuotationEditor({
                         {/* Name & SKU */}
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900">{item.name}</div>
+                          {item.description && (
+                            <div className="text-[11px] text-slate-500 font-normal mt-0.5 leading-snug">
+                              {item.description}
+                            </div>
+                          )}
                           <div className="text-[11px] text-slate-400 font-mono mt-0.5">SKU: {item.sku}</div>
                         </td>
 

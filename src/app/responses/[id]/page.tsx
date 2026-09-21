@@ -37,6 +37,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
     return {
       id: product.id,
       name: product.name,
+      description: product.description,
       sku: product.sku,
       category: product.category,
       unit: product.unit,

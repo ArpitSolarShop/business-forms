@@ -45,6 +45,7 @@ model FormField {
 model Product {
   id          String   @id @default(cuid())
   name        String
+  description String?
   sku         String   @unique
   category    String
   unit        String   // e.g., Mtr, Pcs, Pair

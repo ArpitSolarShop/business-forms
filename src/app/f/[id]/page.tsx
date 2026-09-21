@@ -29,6 +29,7 @@ import {
 type Product = {
   id: string;
   name: string;
+  description?: string | null;
   sku: string;
   category: string;
   unit: string;
@@ -518,6 +519,11 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                                   ({product.category})
                                 </span>
                               </div>
+                              {product.description && (
+                                <div className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                                  {product.description}
+                                </div>
+                              )}
 
                               <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs">
                                 {isQuoteOnRequest ? (

@@ -8,6 +8,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     const updateData: any = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
+    if (body.description !== undefined) updateData.description = body.description ? body.description.trim() : null;
     if (body.sku !== undefined) updateData.sku = body.sku.trim().toUpperCase();
     if (body.category !== undefined) updateData.category = body.category.trim();
     if (body.unit !== undefined) updateData.unit = body.unit.trim();
