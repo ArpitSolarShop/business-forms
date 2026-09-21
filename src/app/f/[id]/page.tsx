@@ -489,10 +489,12 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                     <th className="py-3 px-4 w-12 text-center">S.No.</th>
                     <th className="py-3 px-4">Item Description</th>
-                    <th className="py-3 px-4 text-right">Unit Rate (₹)</th>
                     <th className="py-3 px-4 text-center">Unit</th>
-                    <th className="py-3 px-4 text-center w-36">Quantity</th>
-                    <th className="py-3 px-4 text-right">Line Total (₹)</th>
+                    <th className="py-3 px-4 text-right">Base Rate (₹)</th>
+                    <th className="py-3 px-4 text-center">GST</th>
+                    <th className="py-3 px-4 text-right">Final Rate (₹)</th>
+                    <th className="py-3 px-4 text-center w-32">Quantity</th>
+                    <th className="py-3 px-4 text-right">Total w/ GST (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -523,14 +525,24 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                           </div>
                         </td>
 
-                        {/* Unit Rate */}
-                        <td className="py-3 px-4 text-right font-semibold text-slate-800 whitespace-nowrap">
-                          ₹{product.baseRate.toLocaleString()}
-                        </td>
-
                         {/* Unit */}
                         <td className="py-3 px-4 text-center text-slate-500 whitespace-nowrap">
                           {product.unit}
+                        </td>
+
+                        {/* Base Rate */}
+                        <td className="py-3 px-4 text-right font-semibold text-slate-800 whitespace-nowrap">
+                          ₹{product.baseRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+
+                        {/* GST % */}
+                        <td className="py-3 px-4 text-center text-slate-500 whitespace-nowrap text-[11px]">
+                          {product.gstPercent}%
+                        </td>
+
+                        {/* Final Rate */}
+                        <td className="py-3 px-4 text-right font-bold text-blue-700 whitespace-nowrap">
+                          ₹{(product.baseRate * (1 + product.gstPercent / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
 
                         {/* Quantity Stepper + Input */}
@@ -568,7 +580,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                         <td className="py-3 px-4 text-right font-bold whitespace-nowrap">
                           {qty > 0 ? (
                             <span className="text-blue-700 text-sm">
-                              ₹{lineTotal.toLocaleString()}
+                              ₹{(product.baseRate * (1 + product.gstPercent / 100) * qty).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           ) : (
                             <span className="text-slate-300">—</span>
