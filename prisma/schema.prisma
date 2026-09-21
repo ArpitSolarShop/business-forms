@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Business context
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  forms     Form[]
+  createdAt DateTime @default(now())
+}
+
+model Form {
+  id             String         @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  isPublished    Boolean        @default(false)
+  settings       String?        // JSON string for business settings
+  fields         FormField[]
+  responses      FormResponse[]
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model FormField {
+  id          String          @id @default(cuid())
+  formId      String
+  type        String          // TEXT, NUMBER, SELECT, RADIO, CHECKBOX, DATE
+  label       String
+  placeholder String?
+  required    Boolean         @default(false)
+  options     String?         // JSON string for SELECT/RADIO options
+  order       Int             // Determines rendering order
+  form        Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers     FieldResponse[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  sku         String   @unique
+  category    String
+  unit        String   // e.g., Mtr, Pcs, Pair
+  gstPercent  Float
+  baseRate    Float
+  inStock     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model FormResponse {
+  id          String          @id @default(cuid())
+  rfqNumber   String          @unique @default(uuid())
+  formId      String
+  respondent  String?
+  status      String          @default("New")
+  assignedTo  String?
+  priority    String          @default("Normal")
+  answers     FieldResponse[]
+  form        Form            @relation(fields: [formId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model FieldResponse {
+  id             String       @id @default(cuid())
+  responseId     String
+  fieldId        String
+  value          String       // The actual answer
+  response       FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  field          FormField    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+}

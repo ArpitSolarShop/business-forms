@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+*.db
+*.db-journal
+
+# media
+*.mp4
+
+# ide / agents
+.cursor/
+.claude/
+.devin/
+.agents/
