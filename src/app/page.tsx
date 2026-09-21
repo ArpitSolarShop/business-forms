@@ -320,6 +320,12 @@ export default async function DashboardPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Active Order Form</h3>
+                <Link href="/forms/new">
+                  <Button size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700">
+                    <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+                    New Form
+                  </Button>
+                </Link>
               </div>
 
               <div className="space-y-2.5">
