@@ -55,22 +55,12 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
       value: a.value
     }));
 
-  // Server Actions to update status
-  async function markAsQuoted() {
+  // Server Action to update status
+  async function updateStatus(newStatus: string) {
     'use server';
     await prisma.formResponse.update({
       where: { id: resolvedParams.id },
-      data: { status: 'Quoted' }
-    });
-    revalidatePath(`/responses/${resolvedParams.id}`);
-    revalidatePath('/');
-  }
-
-  async function markAsApproved() {
-    'use server';
-    await prisma.formResponse.update({
-      where: { id: resolvedParams.id },
-      data: { status: 'Approved' }
+      data: { status: newStatus }
     });
     revalidatePath(`/responses/${resolvedParams.id}`);
     revalidatePath('/');
@@ -89,8 +79,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
           formTitle={response.form.title}
           customAnswers={customAnswers}
           initialItems={initialItems}
-          onMarkQuoted={markAsQuoted}
-          onMarkApproved={markAsApproved}
+          onUpdateStatus={updateStatus}
         />
       </div>
     </div>

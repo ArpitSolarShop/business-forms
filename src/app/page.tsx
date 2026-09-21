@@ -57,9 +57,9 @@ export default async function DashboardPage() {
 
   const stats = {
     totalForms: forms.length,
-    newRfqs: responses.filter(r => r.status === 'New').length,
-    pendingQuotes: responses.filter(r => r.status === 'Quoted').length,
-    approved: responses.filter(r => r.status === 'Approved').length,
+    newOrders: responses.filter(r => r.status === 'New' || r.status === 'Order Placed').length,
+    piIssued: responses.filter(r => r.status === 'Quoted' || r.status === 'PI Issued').length,
+    confirmed: responses.filter(r => r.status === 'Approved' || r.status === 'Payment Confirmed' || r.status === 'Dispatched').length,
   };
 
   return (
@@ -78,21 +78,27 @@ export default async function DashboardPage() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-medium text-indigo-200">
                 <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                <span>Enterprise B2B Workflow System</span>
+                <span>B2B Material Orders & Proforma Invoices (PI)</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                Commercial Operations & RFQ Inbox
+                Orders & Proforma Invoice Hub
               </h1>
               <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-                Receive wholesale inquiries, generate automated GST-compliant quotations, and manage purchase requests from your custom business forms.
+                Receive incoming wholesale material orders, automatically generate official Proforma Invoices (PI) with 18% GST calculation, and track dispatch status.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <Link href="/products">
+                <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/20 shadow-sm font-semibold rounded-xl h-11 px-5 text-sm">
+                  <Package className="mr-2 h-4 w-4 text-amber-300" />
+                  View 23 Products
+                </Button>
+              </Link>
               <Link href="/forms/new">
                 <Button size="lg" className="bg-white text-slate-950 hover:bg-slate-100 shadow-sm font-semibold rounded-xl h-11 px-5 text-sm">
                   <PlusCircle className="mr-2 h-4 w-4 text-indigo-600" />
-                  Create Business Form
+                  Create Order Form
                 </Button>
               </Link>
             </div>
@@ -102,64 +108,64 @@ export default async function DashboardPage() {
         {/* Dashboard KPI Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           
-          {/* New RFQs */}
+          {/* New Orders */}
           <div className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New Inquiries</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New Orders</span>
               <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
                 <ClipboardList className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.newRfqs}</span>
-              <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Requires Quote</span>
+              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.newOrders}</span>
+              <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">Order Placed</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Unanswered wholesale requests</p>
+            <p className="mt-1 text-xs text-slate-500">Awaiting Proforma generation</p>
           </div>
 
-          {/* Pending Quotes */}
+          {/* PI Issued */}
           <div className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pending Quotes</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">PI Issued</span>
               <div className="h-9 w-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <Clock className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.pendingQuotes}</span>
-              <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">Proforma Issued</span>
+              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.piIssued}</span>
+              <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">PI Sent</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Awaiting customer approval</p>
+            <p className="mt-1 text-xs text-slate-500">Awaiting client payment</p>
           </div>
 
-          {/* Approved Orders */}
+          {/* Payment & Dispatched */}
           <div className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Approved Orders</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Confirmed / Dispatched</span>
               <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.approved}</span>
-              <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Confirmed PO</span>
+              <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.confirmed}</span>
+              <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Ready / Dispatched</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Ready for dispatch & billing</p>
+            <p className="mt-1 text-xs text-slate-500">Payment verified orders</p>
           </div>
 
           {/* Active Forms */}
           <div className="relative overflow-hidden rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs hover:shadow-md transition-all">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Forms</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Order Forms</span>
               <div className="h-9 w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                 <FileText className="h-5 w-5" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline gap-2">
               <span className="text-3xl font-bold tracking-tight text-slate-900">{stats.totalForms}</span>
-              <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">Live Public</span>
+              <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">Live Forms</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Published capture channels</p>
+            <p className="mt-1 text-xs text-slate-500">Published dealer order forms</p>
           </div>
 
         </div>
@@ -231,24 +237,26 @@ export default async function DashboardPage() {
                         <div className="flex items-start sm:items-center gap-3.5 min-w-0">
                           {/* Indicator Dot & Icon */}
                           <div className={`mt-0.5 sm:mt-0 h-9 w-9 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs font-bold ${
-                            response.status === 'New' 
+                            response.status === 'New' || response.status === 'Order Placed'
                               ? 'bg-amber-100/80 text-amber-800' 
-                              : response.status === 'Quoted' 
+                              : response.status === 'Quoted' || response.status === 'PI Issued'
                               ? 'bg-blue-100/80 text-blue-800' 
+                              : response.status === 'Dispatched'
+                              ? 'bg-purple-100/80 text-purple-800'
                               : 'bg-emerald-100/80 text-emerald-800'
                           }`}>
-                            {response.status === 'New' ? '!' : response.status === 'Quoted' ? '₹' : '✓'}
+                            {response.status === 'New' || response.status === 'Order Placed' ? '📦' : response.status === 'Quoted' || response.status === 'PI Issued' ? '📄' : response.status === 'Dispatched' ? '🚚' : '✓'}
                           </div>
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">
+                              <span className="font-semibold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors font-mono">
                                 {response.rfqNumber}
                               </span>
                               {itemCount > 0 && (
                                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                                   <ShoppingBag className="h-3 w-3 text-slate-400" />
-                                  {itemCount} {itemCount === 1 ? 'Product' : 'Products'}
+                                  {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                                 </span>
                               )}
                             </div>
@@ -263,14 +271,22 @@ export default async function DashboardPage() {
                         {/* Status & Date & Action */}
                         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-12 sm:pl-0">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            response.status === 'New' 
+                            response.status === 'New' || response.status === 'Order Placed'
                               ? 'bg-amber-50 text-amber-700 border border-amber-200/80' 
-                              : response.status === 'Quoted' 
+                              : response.status === 'Quoted' || response.status === 'PI Issued'
                               ? 'bg-blue-50 text-blue-700 border border-blue-200/80' 
+                              : response.status === 'Dispatched'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200/80'
                               : 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
                           }`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${
-                              response.status === 'New' ? 'bg-amber-500' : response.status === 'Quoted' ? 'bg-blue-500' : 'bg-emerald-500'
+                              response.status === 'New' || response.status === 'Order Placed'
+                                ? 'bg-amber-500' 
+                                : response.status === 'Quoted' || response.status === 'PI Issued'
+                                ? 'bg-blue-500' 
+                                : response.status === 'Dispatched'
+                                ? 'bg-purple-500'
+                                : 'bg-emerald-500'
                             }`} />
                             {response.status}
                           </span>

@@ -10,12 +10,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid submission data' }, { status: 400 });
     }
 
+    const piNumber = `PI-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     // Use transaction to ensure response and all fields are saved
     const response = await prisma.$transaction(async (tx) => {
       const newResponse = await tx.formResponse.create({
         data: {
+          rfqNumber: piNumber,
           formId,
           respondent,
+          status: 'Order Placed',
           answers: {
             create: answers.map((ans: any) => ({
               fieldId: ans.fieldId,

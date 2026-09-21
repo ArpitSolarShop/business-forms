@@ -15,21 +15,16 @@ import {
   ShoppingBag, 
   Building2, 
   ShieldCheck, 
-  Clock, 
-  HelpCircle,
   ArrowRight,
-  Sparkles,
-  Filter,
-  Check,
+  FileCheck2,
   Package,
-  Layers,
-  FileSpreadsheet
+  ReceiptText,
+  Printer
 } from 'lucide-react';
 
 type Product = {
   id: string;
   name: string;
-  description?: string | null;
   sku: string;
   category: string;
   unit: string;
@@ -60,16 +55,19 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [submittedRfq, setSubmittedRfq] = useState<string>('');
+  const [submittedPi, setSubmittedPi] = useState<string>('');
   
-  const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [respondent, setRespondent] = useState('');
+  // Buyer form answers
+  const [buyerName, setBuyerName] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [gstin, setGstin] = useState('');
+  const [additionalNotes, setAdditionalNotes] = useState('');
   
-  // Product cart state
+  // Product cart state { [productId]: quantity }
   const [cart, setCart] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   useEffect(() => {
     fetch(`/api/forms/${resolvedParams.id}`)
@@ -91,38 +89,39 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
     });
   };
 
+  // Accurate Rate & GST Calculation
   const getCartTotals = () => {
-    if (!form || !form.products) return { subtotal: 0, items: 0, distinctItems: 0, gst: 0, total: 0, quoteOnRequestCount: 0 };
+    if (!form || !form.products) {
+      return { subtotal: 0, itemsCount: 0, unitsCount: 0, cgst: 0, sgst: 0, totalGst: 0, grandTotal: 0 };
+    }
     
     let subtotal = 0;
-    let items = 0;
-    let distinctItems = 0;
-    let gst = 0;
-    let quoteOnRequestCount = 0;
+    let itemsCount = 0;
+    let unitsCount = 0;
 
     Object.entries(cart).forEach(([id, qty]) => {
       if (qty <= 0) return;
       const product = form.products.find(p => p.id === id);
       if (product) {
-        items += qty;
-        distinctItems += 1;
-        if (product.baseRate > 1) {
-          const lineTotal = product.baseRate * qty;
-          subtotal += lineTotal;
-          gst += lineTotal * (product.gstPercent / 100);
-        } else {
-          quoteOnRequestCount += 1;
-        }
+        itemsCount += 1;
+        unitsCount += qty;
+        subtotal += product.baseRate * qty;
       }
     });
 
+    const cgst = subtotal * 0.09;
+    const sgst = subtotal * 0.09;
+    const totalGst = cgst + sgst;
+    const grandTotal = subtotal + totalGst;
+
     return { 
       subtotal, 
-      items, 
-      distinctItems, 
-      gst, 
-      total: subtotal + gst,
-      quoteOnRequestCount
+      itemsCount, 
+      unitsCount, 
+      cgst, 
+      sgst, 
+      totalGst, 
+      grandTotal 
     };
   };
 
@@ -130,36 +129,44 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
     e.preventDefault();
     if (!form) return;
 
-    if (!respondent.trim()) {
-      alert("Please provide your Primary Contact / Business Email or Phone Number.");
+    if (!buyerName.trim()) {
+      alert("Please enter your Name or Firm Name.");
       return;
     }
 
-    // Validate required fields
-    for (const field of form.fields) {
-      if (field.type === 'PRODUCT_TABLE') {
-        if (field.required && Object.keys(cart).length === 0) {
-          alert(`Please select quantities for at least one item under "${field.label}"`);
-          return;
-        }
-      } else if (field.required && !answers[field.id]) {
-        alert(`Please complete the required field: "${field.label}"`);
-        return;
-      }
+    if (!contactNumber.trim()) {
+      alert("Please enter your Phone or WhatsApp Number.");
+      return;
+    }
+
+    const totals = getCartTotals();
+    if (totals.unitsCount === 0) {
+      alert("Please enter the quantity for at least one solar material.");
+      return;
     }
 
     setSubmitting(true);
     try {
-      const formattedAnswers = Object.entries(answers).map(([fieldId, value]) => ({
-        fieldId,
-        value: typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
-      }));
+      const formattedAnswers = [
+        { fieldId: 'buyer-name', value: buyerName },
+        { fieldId: 'contact-phone', value: contactNumber },
+        { fieldId: 'delivery-address', value: deliveryAddress },
+        { fieldId: 'gstin', value: gstin },
+        { fieldId: 'notes', value: additionalNotes }
+      ];
 
-      // Inject the cart JSON as an answer for the PRODUCT_TABLE field if it exists
+      // Attach cart as PRODUCT_TABLE answer
       const productField = form.fields.find(f => f.type === 'PRODUCT_TABLE');
-      if (productField && Object.keys(cart).length > 0) {
+      if (productField) {
         formattedAnswers.push({
           fieldId: productField.id,
+          value: JSON.stringify(cart)
+        });
+      } else {
+        // Fallback: attach cart with first available field or generic fieldId
+        const firstFieldId = form.fields[0]?.id || 'product-cart';
+        formattedAnswers.push({
+          fieldId: firstFieldId,
           value: JSON.stringify(cart)
         });
       }
@@ -169,21 +176,21 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           formId: form.id,
-          respondent,
+          respondent: `${buyerName} (${contactNumber})`,
           answers: formattedAnswers
         })
       });
 
       if (res.ok) {
         const result = await res.json();
-        setSubmittedRfq(result.rfqNumber || 'RFQ-ORDER-CONFIRMED');
+        setSubmittedPi(result.rfqNumber || 'PI-CONFIRMED');
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        alert("Failed to submit quotation request. Please check required fields and try again.");
+        alert("Failed to submit order. Please try again.");
       }
     } catch (error) {
-      alert("Network error submitting RFQ. Please try again.");
+      alert("Network error submitting order. Please check your connection.");
     } finally {
       setSubmitting(false);
     }
@@ -192,9 +199,9 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Loading Procurement Portal...
+          Loading Order Booking Portal...
         </span>
       </div>
     );
@@ -203,32 +210,22 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
   if (!form) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="h-12 w-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-3">
-          <HelpCircle className="h-6 w-6" />
-        </div>
-        <h1 className="text-xl font-bold text-slate-900">Form Not Available</h1>
-        <p className="text-xs text-slate-500 mt-1 max-w-sm">
-          This portal does not exist, has expired, or the access link is invalid.
-        </p>
+        <h1 className="text-xl font-bold text-slate-900">Order Form Not Found</h1>
+        <p className="text-xs text-slate-500 mt-1">This order form does not exist or has expired.</p>
       </div>
     );
   }
 
   const totals = getCartTotals();
-  const hasProducts = form.fields.some(f => f.type === 'PRODUCT_TABLE');
 
-  // Categories with counts
+  // Category counts
   const categoryCounts: Record<string, number> = {};
   (form.products || []).forEach(p => {
     categoryCounts[p.category] = (categoryCounts[p.category] || 0) + 1;
   });
-
   const categories = ['ALL', ...Object.keys(categoryCounts)];
 
   const filteredProducts = (form.products || []).filter(product => {
-    const qty = cart[product.id] || 0;
-    if (showSelectedOnly && qty === 0) return false;
-
     const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -236,65 +233,87 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
     return matchesCategory && matchesSearch;
   });
 
+  // Success Screen
   if (submitted) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
-        <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200/90 shadow-xl p-8 sm:p-10 text-center space-y-6">
+        <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/90 shadow-xl p-8 sm:p-10 space-y-6 text-center">
           <div className="h-16 w-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-emerald-50/50">
             <CheckCircle2 className="h-9 w-9" />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Badge variant="success" className="text-xs font-semibold px-3 py-1">
-              Quotation Order Transmitted
+              Order Confirmed & Proforma Generated
             </Badge>
-            <h1 className="text-2xl font-bold text-slate-900">Quotation Request Received!</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+              Thank You For Your Order!
+            </h1>
             <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
-              Your equipment requirements have been sent to <strong className="text-slate-800">{form.organization.name}</strong> commercial team.
+              Your material order has been booked directly with <strong className="text-slate-800">{form.organization.name}</strong>.
             </p>
           </div>
 
-          <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-5 text-left space-y-2.5 text-xs">
+          {/* Order Details Receipt Box */}
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 text-left text-xs space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+              <span className="text-slate-500 font-medium">Proforma Invoice No:</span>
+              <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded text-sm">
+                {submittedPi}
+              </span>
+            </div>
+
             <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-medium">RFQ Reference Number:</span>
-              <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{submittedRfq}</span>
+              <span className="text-slate-500 font-medium">Customer / Firm:</span>
+              <span className="font-semibold text-slate-800">{buyerName}</span>
             </div>
+
             <div className="flex justify-between items-center">
-              <span className="text-slate-500 font-medium">Vendor / Contact:</span>
-              <span className="font-semibold text-slate-800">{respondent}</span>
+              <span className="text-slate-500 font-medium">Contact Phone:</span>
+              <span className="font-semibold text-slate-800">{contactNumber}</span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-200/80">
-              <span className="text-slate-500 font-medium">Materials Selected:</span>
-              <span className="font-semibold text-slate-800">{totals.distinctItems} Items ({totals.items} Units)</span>
-            </div>
-            {totals.subtotal > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-medium">Est. Fixed Base Amount:</span>
-                <span className="font-semibold text-slate-900">₹{totals.subtotal.toLocaleString()} + 18% GST</span>
+
+            {deliveryAddress && (
+              <div className="flex justify-between items-start">
+                <span className="text-slate-500 font-medium">Delivery Destination:</span>
+                <span className="font-semibold text-slate-800 text-right max-w-xs">{deliveryAddress}</span>
               </div>
             )}
-            {totals.quoteOnRequestCount > 0 && (
-              <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded border border-amber-200/60 mt-2">
-                * Note: {totals.quoteOnRequestCount} custom item(s) marked for best batch quotation by sales manager.
-              </p>
-            )}
+
+            <div className="pt-2 border-t border-slate-200 space-y-1.5">
+              <div className="flex justify-between text-slate-600">
+                <span>Taxable Base Subtotal:</span>
+                <span className="font-semibold">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>18% GST (CGST 9% + SGST 9%):</span>
+                <span className="font-semibold">₹{totals.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-200">
+                <span>Total Amount Payable:</span>
+                <span className="text-blue-700">₹{totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="text-xs text-slate-400">
-            An official GST Proforma Invoice & Dispatch timeline will be issued directly to your email/WhatsApp.
-          </div>
+          <p className="text-xs text-slate-400">
+            Our dispatch desk has logged this order. You will receive an official dispatch schedule and payment confirmation call shortly.
+          </p>
 
           <Button 
             onClick={() => {
               setSubmitted(false);
               setCart({});
-              setAnswers({});
-              setRespondent('');
+              setBuyerName('');
+              setContactNumber('');
+              setDeliveryAddress('');
+              setGstin('');
+              setAdditionalNotes('');
             }}
             variant="outline"
             className="rounded-xl text-xs"
           >
-            Submit Another RFQ
+            Place Another Order
           </Button>
         </div>
       </div>
@@ -302,392 +321,349 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <div className={`min-h-screen bg-slate-50/80 font-sans ${hasProducts ? 'pb-36' : 'pb-16'}`}>
+    <div className="min-h-screen bg-slate-50/80 font-sans pb-36">
       
-      {/* Top Professional Header Bar */}
-      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
+      {/* Top Header */}
+      <header className="border-b border-slate-200 bg-white sticky top-0 z-30 shadow-xs">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
+            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
               <Building2 className="h-4 w-4" />
             </div>
             <div>
               <span className="font-bold text-slate-900 text-sm block leading-none">{form.organization.name}</span>
-              <span className="text-[10px] text-slate-500 font-medium">Wholesale Procurement & RFQ Portal</span>
+              <span className="text-[10px] text-slate-500 font-medium">Official Solar Material Order Booking Portal</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-medium text-slate-600">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">Verified GST Invoicing</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Live Pricing & 18% GST Auto-Calculated</span>
           </div>
         </div>
       </header>
 
-      {/* Main Form Container */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      {/* Main Container */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-7 space-y-6">
         
-        {/* Form Hero Card */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs p-6 sm:p-8 space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500" />
-          
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-semibold">
-              <Sparkles className="h-3 w-3" />
-              <span>Commercial Vendor Inquiry & Quotation</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {form.title}
-            </h1>
-            {form.description && (
-              <p className="text-slate-600 text-sm leading-relaxed pt-1">
-                {form.description}
-              </p>
-            )}
+        {/* Banner */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-xs relative overflow-hidden space-y-2">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold">
+            <ReceiptText className="h-3.5 w-3.5" />
+            <span>Direct Order Booking & Proforma Generation</span>
           </div>
-
-          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-4 text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-slate-400" />
-              <span>Quotes issued same day</span>
-            </span>
-            <span>•</span>
-            <span>All catalog rates are exclusive of GST</span>
-            <span>•</span>
-            <span>Bulk volume discounts applied at billing</span>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Wholesale Material Order Form
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
+            Select your required equipment quantities from the 23 items below. As you enter quantities, your line amounts, 18% GST (CGST/SGST), and total payable are calculated in real-time.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Primary Vendor Identifier */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white shadow-xs p-6 space-y-4">
-            <div>
-              <Label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Your Official Email or WhatsApp Mobile Number</span>
-                <span className="text-red-500">*</span>
-              </Label>
-              <p className="text-xs text-slate-500 mt-0.5">
-                We will send the official PDF Proforma quotation and dispatch timeline here.
-              </p>
+          {/* 1. Buyer Information Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">1</span>
+                <span>Customer & Delivery Details</span>
+              </h2>
+              <span className="text-xs text-slate-400">* Required for Proforma Invoice</span>
             </div>
 
-            <Input 
-              required
-              placeholder="e.g. +91 98765 43210 or procurement@company.com"
-              value={respondent}
-              onChange={(e) => setRespondent(e.target.value)}
-              className="h-11 rounded-xl text-sm border-slate-200 focus-visible:ring-indigo-500 font-medium text-slate-900 pl-3"
-            />
-          </div>
-
-          {/* Form Dynamic Fields */}
-          {form.fields.map((field) => (
-            <div key={field.id} className="rounded-2xl border border-slate-200/90 bg-white shadow-xs p-6 space-y-4">
-              
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <span>{field.label}</span>
-                  {field.required && <span className="text-red-500">*</span>}
-                </Label>
-                {field.placeholder && field.type !== 'PRODUCT_TABLE' && (
-                  <p className="text-xs text-slate-400">{field.placeholder}</p>
-                )}
+                <Label className="text-xs font-semibold text-slate-700">Full Name / Business Firm Name *</Label>
+                <Input 
+                  required
+                  placeholder="e.g. Apex Solar Solutions / Ramesh Patel"
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                  className="rounded-xl text-xs h-10 border-slate-200"
+                />
               </div>
 
-              {/* FIELD TYPE: SHORT TEXT */}
-              {field.type === 'TEXT' && (
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">Mobile / WhatsApp Number *</Label>
                 <Input 
-                  required={field.required}
-                  placeholder={field.placeholder || "Your answer"}
-                  value={answers[field.id] || ''}
-                  onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
-                  className="rounded-xl border-slate-200 text-sm focus-visible:ring-indigo-500"
+                  required
+                  placeholder="e.g. +91 98765 43210"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  className="rounded-xl text-xs h-10 border-slate-200"
                 />
-              )}
+              </div>
 
-              {/* FIELD TYPE: PARAGRAPH */}
-              {field.type === 'PARAGRAPH' && (
-                <Textarea 
-                  required={field.required}
-                  placeholder={field.placeholder || "Enter details..."}
-                  value={answers[field.id] || ''}
-                  onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
-                  className="rounded-xl border-slate-200 text-sm focus-visible:ring-indigo-500 resize-none min-h-[90px]"
+              <div className="sm:col-span-2 space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">Delivery Site Address & Destination Pincode *</Label>
+                <Input 
+                  required
+                  placeholder="e.g. Site 4, Industrial Area, Noida, UP - 201301"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  className="rounded-xl text-xs h-10 border-slate-200"
                 />
-              )}
+              </div>
 
-              {/* FIELD TYPE: PRODUCT CATALOG / WHOLESALE ORDER TABLE */}
-              {field.type === 'PRODUCT_TABLE' && form.products && (
-                <div className="space-y-5 pt-1">
-                  
-                  {/* Search Bar & Selected Items Filter Toggle */}
-                  <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input 
-                        placeholder="Search by name or SKU (e.g. 4MM HPL, ACDB, Earthing Rod)..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 h-10 rounded-xl text-xs border-slate-200 bg-slate-50 focus-visible:ring-indigo-500"
-                      />
-                    </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">GSTIN Number (Optional - For Tax Input Credit)</Label>
+                <Input 
+                  placeholder="e.g. 07AAACS1234Q1Z5"
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value)}
+                  className="rounded-xl text-xs h-10 border-slate-200 uppercase font-mono"
+                />
+              </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowSelectedOnly(!showSelectedOnly)}
-                      className={`h-10 px-3.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border ${
-                        showSelectedOnly 
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      <ShoppingBag className="h-3.5 w-3.5" />
-                      <span>Selected Only ({totals.distinctItems})</span>
-                    </button>
-                  </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">Order Notes / Unloading Instructions</Label>
+                <Input 
+                  placeholder="e.g. Need 40ft trailer access, call before dispatch"
+                  value={additionalNotes}
+                  onChange={(e) => setAdditionalNotes(e.target.value)}
+                  className="rounded-xl text-xs h-10 border-slate-200"
+                />
+              </div>
+            </div>
+          </div>
 
-                  {/* Category Filter Pills with Item Counts */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin">
-                    {categories.map((cat) => {
-                      const count = cat === 'ALL' ? (form.products || []).length : (categoryCounts[cat] || 0);
-                      const isSelected = selectedCategory === cat;
+          {/* 2. Products Table Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <span className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">2</span>
+                  <span>Select Materials & Enter Quantities</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Type quantity directly or use the stepper buttons.
+                </p>
+              </div>
 
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCategory(cat);
-                            setShowSelectedOnly(false);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-slate-900 text-white shadow-xs'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          <span>{cat}</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
-                          }`}>
-                            {count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Quick Search */}
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="Filter materials..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
 
-                  {/* Products Grid / List */}
-                  <div className="space-y-3">
-                    {filteredProducts.length === 0 ? (
-                      <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
-                        <Package className="h-6 w-6 mx-auto text-slate-300" />
-                        <p>No materials found matching criteria.</p>
-                        {showSelectedOnly && (
-                          <button 
-                            type="button" 
-                            onClick={() => setShowSelectedOnly(false)} 
-                            className="text-indigo-600 font-semibold hover:underline"
-                          >
-                            View all items
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      filteredProducts.map((product) => {
-                        const qty = cart[product.id] || 0;
-                        const isQuoteOnRequest = product.baseRate <= 1;
-                        const lineTotal = product.baseRate * qty;
+            {/* Category Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              {categories.map((cat) => {
+                const count = cat === 'ALL' ? (form.products || []).length : (categoryCounts[cat] || 0);
+                const isSelected = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{cat}</span>
+                    <span className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                        return (
-                          <div 
-                            key={product.id} 
-                            className={`p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
-                              qty > 0 
-                                ? 'border-indigo-400 bg-indigo-50/25 shadow-xs' 
-                                : 'border-slate-200/90 bg-slate-50/40 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="font-bold text-sm text-slate-900">{product.name}</h4>
-                                <span className="font-mono text-[10px] text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
-                                  {product.sku}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-medium">
-                                  ({product.category})
-                                </span>
-                              </div>
-                              {product.description && (
-                                <div className="text-[11px] text-slate-500 leading-snug mt-0.5">
-                                  {product.description}
-                                </div>
-                              )}
+            {/* Clean Products Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-4 w-12 text-center">S.No.</th>
+                    <th className="py-3 px-4">Item Description</th>
+                    <th className="py-3 px-4 text-right">Unit Rate (₹)</th>
+                    <th className="py-3 px-4 text-center">Unit</th>
+                    <th className="py-3 px-4 text-center w-36">Quantity</th>
+                    <th className="py-3 px-4 text-right">Line Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProducts.map((product, idx) => {
+                    const qty = cart[product.id] || 0;
+                    const lineTotal = product.baseRate * qty;
+                    const isSelected = qty > 0;
 
-                              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs">
-                                {isQuoteOnRequest ? (
-                                  <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px]">
-                                    Rate on Request (RFQ)
-                                  </span>
-                                ) : (
-                                  <span className="font-bold text-indigo-700">
-                                    ₹{product.baseRate.toLocaleString()} <span className="font-normal text-slate-500">/ {product.unit}</span>
-                                  </span>
-                                )}
+                    return (
+                      <tr 
+                        key={product.id} 
+                        className={`transition-colors ${
+                          isSelected ? 'bg-blue-50/30' : 'hover:bg-slate-50/60'
+                        }`}
+                      >
+                        {/* S.No */}
+                        <td className="py-3 px-4 text-center font-mono text-slate-400">
+                          {idx + 1}
+                        </td>
 
-                                <span className="text-slate-300">•</span>
-                                <span className="text-[11px] text-slate-500">
-                                  Unit: <strong className="text-slate-700">{product.unit}</strong> | GST: 18%
-                                </span>
-
-                                {qty > 0 && !isQuoteOnRequest && (
-                                  <>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded">
-                                      Total: ₹{lineTotal.toLocaleString()}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Quantity Selector: Stepper + Direct Typing Input! */}
-                            <div className="flex items-center gap-1.5 bg-white border border-slate-200/90 rounded-xl p-1 shadow-xs self-end sm:self-center shrink-0">
-                              <button 
-                                type="button" 
-                                onClick={() => updateCart(product.id, qty - 1)}
-                                disabled={qty === 0}
-                                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                              >
-                                <Minus className="h-3.5 w-3.5" />
-                              </button>
-                              
-                              <div className="flex items-center gap-1 px-1">
-                                <input 
-                                  type="number" 
-                                  min="0"
-                                  value={qty === 0 ? '' : qty} 
-                                  placeholder="0"
-                                  onChange={(e) => updateCart(product.id, parseInt(e.target.value) || 0)}
-                                  className="w-14 text-center font-black text-sm text-slate-900 border-none outline-none focus:ring-0 p-0 bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                />
-                                <span className="text-[10px] text-slate-400 font-semibold">{product.unit}</span>
-                              </div>
-
-                              <button 
-                                type="button" 
-                                onClick={() => updateCart(product.id, qty + 1)}
-                                className="h-8 w-8 rounded-lg flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all"
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
+                        {/* Item Description */}
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                            {product.name}
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {product.sku} • {product.category}
+                          </div>
+                        </td>
 
-                </div>
-              )}
+                        {/* Unit Rate */}
+                        <td className="py-3 px-4 text-right font-semibold text-slate-800 whitespace-nowrap">
+                          ₹{product.baseRate.toLocaleString()}
+                        </td>
 
+                        {/* Unit */}
+                        <td className="py-3 px-4 text-center text-slate-500 whitespace-nowrap">
+                          {product.unit}
+                        </td>
+
+                        {/* Quantity Stepper + Input */}
+                        <td className="py-3 px-4 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center border border-slate-300 rounded-lg bg-white p-0.5 shadow-xs">
+                            <button
+                              type="button"
+                              onClick={() => updateCart(product.id, qty - 1)}
+                              disabled={qty === 0}
+                              className="h-7 w-7 rounded flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-20 transition-all"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            
+                            <input 
+                              type="number"
+                              min="0"
+                              value={qty === 0 ? '' : qty}
+                              placeholder="0"
+                              onChange={(e) => updateCart(product.id, parseInt(e.target.value) || 0)}
+                              className="w-14 text-center font-bold text-xs text-slate-900 border-none outline-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() => updateCart(product.id, qty + 1)}
+                              className="h-7 w-7 rounded flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Line Total */}
+                        <td className="py-3 px-4 text-right font-bold whitespace-nowrap">
+                          {qty > 0 ? (
+                            <span className="text-blue-700 text-sm">
+                              ₹{lineTotal.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))}
+          </div>
 
-          {/* Direct Submit Button (If not product table) */}
-          {!hasProducts && (
-            <div className="pt-2">
-              <Button 
-                type="submit" 
-                disabled={submitting}
-                className="w-full sm:w-auto px-8 h-11 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm text-sm font-semibold"
-              >
-                {submitting ? 'Submitting...' : 'Submit Request'}
-              </Button>
+          {/* 3. Live Total Calculation Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Order Pricing Breakdown (18% GST Compliant)
+            </h3>
+
+            <div className="space-y-2 pt-2 border-t border-slate-100 max-w-md ml-auto text-xs">
+              <div className="flex justify-between text-slate-600">
+                <span>Items Selected:</span>
+                <span className="font-semibold text-slate-800">{totals.itemsCount} materials ({totals.unitsCount} total units)</span>
+              </div>
+
+              <div className="flex justify-between text-slate-600">
+                <span>Taxable Base Subtotal:</span>
+                <span className="font-semibold text-slate-800">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+
+              <div className="flex justify-between text-slate-600">
+                <span>CGST (9%):</span>
+                <span className="font-semibold text-slate-800">₹{totals.cgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+
+              <div className="flex justify-between text-slate-600">
+                <span>SGST (9%):</span>
+                <span className="font-semibold text-slate-800">₹{totals.sgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+
+              <div className="flex justify-between text-base font-extrabold text-slate-900 pt-3 border-t-2 border-slate-900">
+                <span>Total Amount Payable:</span>
+                <span className="text-blue-700">₹{totals.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
             </div>
-          )}
+          </div>
 
         </form>
 
       </main>
 
-      {/* Floating Bottom Commercial Summary Bar */}
-      {hasProducts && (
-        <aside aria-label="Commercial order summary" className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] py-3 px-4 sm:px-6">
-          <div className="max-w-3xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <ShoppingBag className="h-5 w-5" />
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-700">
-                    {totals.distinctItems} Items ({totals.items} Units)
-                  </span>
-                  {totals.quoteOnRequestCount > 0 && (
-                    <>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-[11px] font-semibold text-amber-700">
-                        {totals.quoteOnRequestCount} custom quote
-                      </span>
-                    </>
-                  )}
-                  {totals.subtotal > 0 && (
-                    <>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        +18% GST (₹{totals.gst.toLocaleString(undefined, { maximumFractionDigits: 0 })})
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <div className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
-                  {totals.subtotal > 0 ? (
-                    <>
-                      ₹{totals.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      <span className="text-xs font-normal text-slate-500 ml-1.5">
-                        {totals.quoteOnRequestCount > 0 ? 'Est. Fixed Total (+ RFQ items)' : 'Est. Total with GST'}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-bold text-slate-800">
-                      Rates to be Quoted on Submission
-                    </span>
-                  )}
-                </div>
-              </div>
+      {/* Floating Sticky Bottom Bar */}
+      <aside aria-label="Order summary footer" className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl py-3.5 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-5 w-5" />
             </div>
 
-            <Button 
-              type="button"
-              onClick={() => {
-                const formElement = document.querySelector('form');
-                if (formElement) formElement.requestSubmit();
-              }}
-              disabled={submitting || totals.items === 0} 
-              className="h-11 px-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl shadow-md shadow-indigo-200 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Submitting RFQ...</span>
-                </>
-              ) : (
-                <>
-                  <span>Request Official Quotation</span>
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-
+            <div>
+              <div className="text-xs font-semibold text-slate-500">
+                {totals.itemsCount} Items ({totals.unitsCount} Units) • +18% GST Included
+              </div>
+              <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                ₹{totals.grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <span className="text-xs font-normal text-slate-500 ml-1.5">Total Amount</span>
+              </div>
+            </div>
           </div>
-        </aside>
-      )}
+
+          <Button 
+            type="button"
+            onClick={() => {
+              const formEl = document.querySelector('form');
+              if (formEl) formEl.requestSubmit();
+            }}
+            disabled={submitting || totals.unitsCount === 0} 
+            className="h-11 px-7 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shrink-0"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Booking Order...</span>
+              </>
+            ) : (
+              <>
+                <span>Place Order & Generate Proforma Invoice (PI)</span>
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+
+        </div>
+      </aside>
 
     </div>
   );
