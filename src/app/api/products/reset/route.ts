@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { defaultProducts } from '../../../../../prisma/seed';
+import { official23Products } from '../../../../../prisma/seed';
 
 export async function POST() {
   try {
-    for (const product of defaultProducts) {
+    const skusToKeep = official23Products.map(p => p.sku);
+
+    // Remove any items not in the 23 items list
+    await prisma.product.deleteMany({
+      where: {
+        sku: { notIn: skusToKeep }
+      }
+    });
+
+    for (const product of official23Products) {
       await prisma.product.upsert({
         where: { sku: product.sku },
         update: {
           name: product.name,
-          description: product.description,
           category: product.category,
           unit: product.unit,
           gstPercent: product.gstPercent,

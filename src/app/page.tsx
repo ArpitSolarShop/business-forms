@@ -389,7 +389,7 @@ export default async function DashboardPage() {
                   href="/products" 
                   className="w-full py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                 >
-                  <span>Manage Complete Catalog (37+ Items)</span>
+                  <span>Manage Complete Catalog (23 Items)</span>
                   <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
                 </Link>
               </div>
