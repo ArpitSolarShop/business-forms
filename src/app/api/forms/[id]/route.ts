@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+import { Product } from '@prisma/client';
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const resolvedParams = await params;
@@ -19,7 +21,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     const hasProductTable = form.fields.some(f => f.type === 'PRODUCT_TABLE');
-    let products: any[] = [];
+    let products: Product[] = [];
     if (hasProductTable) {
       // Fetch available products from the database
       products = await prisma.product.findMany({

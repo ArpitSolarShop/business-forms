@@ -7,11 +7,7 @@ import {
   ArrowLeft, 
   Printer, 
   CheckCircle2, 
-  Clock, 
-  Building2, 
-  FileText,
   Truck,
-  CreditCard,
   ReceiptText
 } from 'lucide-react';
 
@@ -41,7 +37,6 @@ type Props = {
 };
 
 export function QuotationEditor({
-  responseId,
   rfqNumber,
   status: initialStatus,
   createdAt,
@@ -53,13 +48,12 @@ export function QuotationEditor({
   onUpdateStatus
 }: Props) {
   // Store custom rates in local state (prepopulated with official catalog rate)
-  const [rates, setRates] = useState<Record<string, number>>(() => {
-    const map: Record<string, number> = {};
-    initialItems.forEach(item => {
-      map[item.id] = item.baseRate || 0;
-    });
-    return map;
-  });
+  const [rates, setRates] = useState<Record<string, number>>(() =>
+    initialItems.reduce<Record<string, number>>((acc, item) => ({
+      ...acc,
+      [item.id]: item.baseRate || 0,
+    }), {})
+  );
 
   const [status, setStatus] = useState(initialStatus);
   const [actionLoading, setActionLoading] = useState(false);
@@ -73,26 +67,17 @@ export function QuotationEditor({
   };
 
   // Live recalculations
-  let subtotal = 0;
-  let totalGst = 0;
-  let totalUnits = 0;
-
   const calculatedItems = initialItems.map(item => {
     const rate = rates[item.id] !== undefined ? rates[item.id] : item.baseRate;
-    const lineTotal = rate * item.qty;
-    subtotal += lineTotal;
-    totalUnits += item.qty;
-    
-    // Accurate GST per item based on actual product config
-    const lineGst = lineTotal * (item.gstPercent / 100);
-    totalGst += lineGst;
-
     return {
       ...item,
       currentRate: rate,
-      lineTotal
+      lineTotal: rate * item.qty
     };
   });
+
+  const subtotal = calculatedItems.reduce((acc, item) => acc + item.lineTotal, 0);
+  const totalGst = calculatedItems.reduce((acc, item) => acc + (item.lineTotal * (item.gstPercent / 100)), 0);
 
   const cgst = totalGst / 2;
   const sgst = totalGst / 2;

@@ -49,7 +49,7 @@ export async function POST(req: Request) {
           organizationId: org.id,
           isPublished: true,
           fields: {
-            create: fields.map((field: any, index: number) => ({
+            create: fields.map((field: { type: string, label: string, placeholder?: string, required?: boolean, options?: string[] }, index: number) => ({
               type: field.type,
               label: field.label,
               placeholder: field.placeholder,

@@ -21,7 +21,7 @@ export async function POST(req: Request) {
           respondent,
           status: 'Order Placed',
           answers: {
-            create: answers.map((ans: any) => ({
+            create: answers.map((ans: { fieldId: string; value: string | number }) => ({
               fieldId: ans.fieldId,
               value: String(ans.value),
             }))

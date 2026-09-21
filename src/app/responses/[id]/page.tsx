@@ -2,14 +2,19 @@ import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { QuotationEditor } from './quotation-editor';
+import { Product } from '@prisma/client';
 
-export default async function ResponseDetail({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+export default async function ResponseDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const response = await prisma.formResponse.findUnique({
-    where: { id: resolvedParams.id },
+    where: { id },
     include: {
-      form: { include: { organization: true } },
-      answers: { include: { field: true } }
+      form: {
+        include: { organization: true }
+      },
+      answers: {
+        include: { field: true }
+      }
     }
   });
 
@@ -20,7 +25,7 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
   // Find the product table answer
   const productAnswer = response.answers.find(a => a.field.type === 'PRODUCT_TABLE');
   let cart: Record<string, number> = {};
-  let products: any[] = [];
+  let products: Product[] = [];
   
   if (productAnswer) {
     try {
@@ -28,7 +33,9 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
       products = await prisma.product.findMany({
         where: { id: { in: Object.keys(cart) } }
       });
-    } catch(e) {}
+    } catch {
+      // ignore parse error
+    }
   }
 
   const initialItems = products.map(product => {
@@ -59,10 +66,10 @@ export default async function ResponseDetail({ params }: { params: Promise<{ id:
   async function updateStatus(newStatus: string) {
     'use server';
     await prisma.formResponse.update({
-      where: { id: resolvedParams.id },
+      where: { id },
       data: { status: newStatus }
     });
-    revalidatePath(`/responses/${resolvedParams.id}`);
+    revalidatePath(`/responses/${id}`);
     revalidatePath('/');
   }
 

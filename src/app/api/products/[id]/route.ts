@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+import { Prisma } from '@prisma/client';
+
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await req.json();
 
-    const updateData: any = {};
+    const updateData: Prisma.ProductUpdateInput = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.description !== undefined) updateData.description = body.description ? body.description.trim() : null;
     if (body.sku !== undefined) updateData.sku = body.sku.trim().toUpperCase();

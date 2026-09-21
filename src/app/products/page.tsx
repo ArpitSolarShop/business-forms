@@ -68,7 +68,6 @@ export default function ProductCatalogPage() {
 
   const fetchProducts = async () => {
     try {
-      setLoading(true);
       const res = await fetch('/api/products');
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -82,6 +81,7 @@ export default function ProductCatalogPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, []);
 
