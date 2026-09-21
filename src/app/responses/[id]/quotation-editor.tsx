@@ -209,21 +209,25 @@ export function QuotationEditor({
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
             
             <div className="space-y-2">
-              <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                  <Building2 className="h-5 w-5" />
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-auto flex-shrink-0">
+                  {/* Next.js img element for the new logo */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logo.png" alt="Krishnanuja Renewables Logo" className="h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
                     {orgName}
                   </h1>
-                  <p className="text-xs font-medium text-slate-500">Commercial Solar & Structure Systems</p>
+                  <p className="text-xs font-medium text-slate-500">Solar EPC Services</p>
                 </div>
               </div>
 
               <div className="text-xs text-slate-500 space-y-0.5 pt-1">
-                <p>Industrial Estate, Phase II, New Delhi - 110020</p>
-                <p>GSTIN: 07AAACA1234F1Z8 | Email: sales@arpitsolar.in | Phone: +91 98765 43210</p>
+                <p>Office: Sh16/114-25-K-2, Sharvodayanagar, Kadipur, Shivpur, Varanasi 221003 (UP), India</p>
+                <p>Warehouse: SH15/243, Bharlai, Shivpur, Varanasi 221003</p>
+                <p>GSTIN: 09AAMCK6259J1ZU | CIN: U35105UP2026PTC244522</p>
+                <p>Email: info@krishnanuja.com | Phone: +91 9044555572</p>
               </div>
             </div>
 
@@ -366,11 +370,11 @@ export function QuotationEditor({
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
                 <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Payment Wire Details (RTGS / NEFT)</span>
                 <div className="space-y-1 text-slate-600">
-                  <p><span className="font-medium">Beneficiary Name:</span> {orgName}</p>
-                  <p><span className="font-medium">Bank:</span> HDFC Bank Ltd, Industrial Estate Branch</p>
-                  <p><span className="font-medium">Account No:</span> 50200098765432</p>
-                  <p><span className="font-medium">IFSC Code:</span> HDFC0001234</p>
-                  <p><span className="font-medium">Branch:</span> Okhla Industrial Area, New Delhi</p>
+                  <p><span className="font-medium">Beneficiary Name:</span> Krishnanuja Renewables Private Limited</p>
+                  <p><span className="font-medium">Bank:</span> State Bank of India</p>
+                  <p><span className="font-medium">Account No:</span> 45174224440</p>
+                  <p><span className="font-medium">IFSC Code:</span> SBIN0064799</p>
+                  <p><span className="font-medium">Branch:</span> Phulwariya, Varanasi</p>
                 </div>
               </div>
 
