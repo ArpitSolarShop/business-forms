@@ -43,7 +43,7 @@ export default function FormBuilder() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [orgName, setOrgName] = useState('Arpit Solar & Electricals');
+  const [orgName, setOrgName] = useState('Krishnanuja Renewables Private Limited');
   
   const [fields, setFields] = useState<Field[]>([
     { 
@@ -253,7 +253,7 @@ export default function FormBuilder() {
                   <Input 
                     value={orgName} 
                     onChange={(e) => setOrgName(e.target.value)} 
-                    placeholder="e.g. Arpit Solar & Electricals" 
+                    placeholder="e.g. Krishnanuja Renewables Private Limited" 
                     className="border-slate-200 font-medium text-slate-900 focus-visible:ring-indigo-500 rounded-xl"
                   />
                 </div>
