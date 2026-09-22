@@ -487,9 +487,9 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
               })}
             </div>
 
-            {/* Clean Products Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <table className="w-full text-left border-collapse text-xs">
+            {/* Desktop Products Table */}
+            <div className="hidden sm:block border border-slate-200 rounded-xl overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                     <th className="py-3 px-4 w-12 text-center">S.No.</th>
@@ -596,6 +596,76 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Products List */}
+            <div className="sm:hidden space-y-3">
+              {filteredProducts.map((product) => {
+                const qty = cart[product.id] || 0;
+                const isSelected = qty > 0;
+                const finalRate = product.baseRate * (1 + product.gstPercent / 100);
+
+                return (
+                  <div key={product.id} className={`p-4 rounded-xl border transition-colors ${isSelected ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-white'}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="pr-2">
+                        <h4 className="font-bold text-slate-900 text-sm leading-tight">{product.name}</h4>
+                        <p className="text-[10px] text-slate-500 font-mono mt-1">{product.sku} • {product.category}</p>
+                      </div>
+                      <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg shrink-0">
+                        ₹{finalRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-3 mt-4 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-slate-500">
+                          Base: ₹{product.baseRate.toLocaleString()} <span className="mx-1 text-slate-300">•</span> GST: {product.gstPercent}%
+                        </div>
+                        
+                        {/* Mobile Quantity Stepper */}
+                        <div className="inline-flex items-center border border-slate-300 rounded-lg bg-white p-0.5 shadow-xs">
+                          <button
+                            type="button"
+                            onClick={() => updateCart(product.id, qty - 1)}
+                            disabled={qty === 0}
+                            className="h-8 w-8 rounded flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-20 transition-all"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          
+                          <input 
+                            type="number"
+                            min="0"
+                            value={qty === 0 ? '' : qty}
+                            placeholder="0"
+                            onChange={(e) => updateCart(product.id, parseInt(e.target.value) || 0)}
+                            className="w-14 text-center font-bold text-sm text-slate-900 border-none outline-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => updateCart(product.id, qty + 1)}
+                            className="h-8 w-8 rounded flex items-center justify-center text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Mobile Line Total */}
+                      {qty > 0 && (
+                        <div className="flex items-center justify-between bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
+                          <span className="text-xs font-semibold text-blue-800">Item Total</span>
+                          <span className="text-sm font-extrabold text-blue-700">
+                            ₹{(finalRate * qty).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
