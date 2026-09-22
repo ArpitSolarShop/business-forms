@@ -152,26 +152,24 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
 
     setSubmitting(true);
     try {
-      const formattedAnswers = [
-        { fieldId: 'buyer-name', value: buyerName },
-        { fieldId: 'contact-phone', value: contactNumber },
-        { fieldId: 'delivery-address', value: deliveryAddress },
-        { fieldId: 'gstin', value: gstin },
-        { fieldId: 'notes', value: additionalNotes }
-      ];
+      const formattedAnswers: { fieldId: string; value: string }[] = [];
+
+      const gstField = form.fields.find(f => f.type === 'TEXT');
+      if (gstField && gstin) {
+        formattedAnswers.push({ fieldId: gstField.id, value: gstin });
+      }
+
+      const addressField = form.fields.find(f => f.type === 'PARAGRAPH');
+      if (addressField) {
+        const fullAddress = additionalNotes ? `${deliveryAddress}\nNotes: ${additionalNotes}` : deliveryAddress;
+        formattedAnswers.push({ fieldId: addressField.id, value: fullAddress });
+      }
 
       // Attach cart as PRODUCT_TABLE answer
       const productField = form.fields.find(f => f.type === 'PRODUCT_TABLE');
       if (productField) {
         formattedAnswers.push({
           fieldId: productField.id,
-          value: JSON.stringify(cart)
-        });
-      } else {
-        // Fallback: attach cart with first available field or generic fieldId
-        const firstFieldId = form.fields[0]?.id || 'product-cart';
-        formattedAnswers.push({
-          fieldId: firstFieldId,
           value: JSON.stringify(cart)
         });
       }
