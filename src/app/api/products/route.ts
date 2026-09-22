@@ -15,8 +15,8 @@ export async function GET(req: Request) {
     }
     if (query) {
       where.OR = [
-        { name: { contains: query } },
-        { sku: { contains: query } },
+        { name: { contains: query, mode: 'insensitive' } },
+        { sku: { contains: query, mode: 'insensitive' } },
       ];
     }
 

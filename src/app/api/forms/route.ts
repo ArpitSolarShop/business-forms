@@ -28,6 +28,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Title and Organization are required' }, { status: 400 });
     }
 
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
+      return NextResponse.json({ error: 'At least one form field is required' }, { status: 400 });
+    }
+
     // Using a Prisma transaction to ensure the organization (if new), form, and fields are created together
     const form = await prisma.$transaction(async (tx) => {
       // Find or create organization

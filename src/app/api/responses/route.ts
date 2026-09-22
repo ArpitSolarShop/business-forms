@@ -10,8 +10,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid submission data' }, { status: 400 });
     }
 
-    const piNumber = `PI-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    // 1. Verify the form exists to prevent foreign key constraint failures
+    const form = await prisma.form.findUnique({ where: { id: formId } });
+    if (!form) {
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+    }
 
+    // 2. Safely generate a highly unique PI Number without using a pure Math.random() that can collide
+    const uniqueHash = Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const piNumber = `PI-${new Date().getFullYear()}-${uniqueHash}`;
     // Use transaction to ensure response and all fields are saved
     const response = await prisma.$transaction(async (tx) => {
       const newResponse = await tx.formResponse.create({
