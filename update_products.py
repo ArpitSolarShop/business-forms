@@ -1,4 +1,6 @@
-export const official23Products = [
+import re
+
+content = """export const official23Products = [
   {
     name: 'AC WIRE 4MM HPL',
     sku: 'APL-ACW-4H',
@@ -225,3 +227,7 @@ export const official23Products = [
     inStock: true,
   },
 ];
+"""
+
+with open('src/lib/products.ts', 'w') as f:
+    f.write(content)
