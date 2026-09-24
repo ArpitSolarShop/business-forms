@@ -13,8 +13,7 @@ import {
   X, 
   Check, 
   ArrowLeft,
-  Loader2,
-  CheckCircle2
+  Loader2
 } from 'lucide-react';
 
 type Product = {
@@ -97,7 +96,7 @@ export default function ProductCatalogPage() {
       } else {
         alert("Failed to reset catalog defaults.");
       }
-    } catch (e) {
+    } catch {
       alert("Error resetting defaults");
     } finally {
       setIsResetting(false);
@@ -176,7 +175,7 @@ export default function ProductCatalogPage() {
           alert(err.error || "Failed to create product");
         }
       }
-    } catch (e) {
+    } catch {
       alert("Error saving product");
     } finally {
       setIsSaving(false);
@@ -194,7 +193,7 @@ export default function ProductCatalogPage() {
       } else {
         alert("Failed to delete product.");
       }
-    } catch (e) {
+    } catch {
       alert("Error deleting product");
     }
   };
@@ -209,7 +208,7 @@ export default function ProductCatalogPage() {
       if (res.ok) {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, inStock: !p.inStock } : p));
       }
-    } catch (e) {
+    } catch {
       alert("Error updating stock");
     }
   };
@@ -230,7 +229,7 @@ export default function ProductCatalogPage() {
         setProducts(prev => prev.map(p => p.id === product.id ? { ...p, baseRate: rateVal } : p));
         setEditingRateId(null);
       }
-    } catch (e) {
+    } catch {
       alert("Error updating rate");
     }
   };
@@ -576,6 +575,7 @@ export default function ProductCatalogPage() {
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     className="w-full h-9 rounded-xl border border-slate-200 text-xs px-2.5 bg-white text-slate-800"
                   >
+                    <option value="per bundle">per bundle</option>
                     <option value="per mtr">per mtr</option>
                     <option value="piece">piece</option>
                     <option value="per pair">per pair</option>

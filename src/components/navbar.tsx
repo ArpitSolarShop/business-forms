@@ -5,15 +5,9 @@ import { usePathname } from 'next/navigation';
 import { 
   Layers, 
   Inbox, 
-  PlusCircle, 
   Package, 
-  Bell, 
-  Search,
-  Sparkles,
-  ExternalLink,
-  ShieldCheck
+  Bell
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export function Navbar() {

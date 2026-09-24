@@ -55,6 +55,22 @@ export function QuotationEditor({
     }), {})
   );
 
+  // Store custom GST overrides per item
+  const [gstOverrides, setGstOverrides] = useState<Record<string, number>>(() =>
+    initialItems.reduce<Record<string, number>>((acc, item) => ({
+      ...acc,
+      [item.id]: item.gstPercent,
+    }), {})
+  );
+
+  // Store custom unit overrides per item
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, string>>(() =>
+    initialItems.reduce<Record<string, string>>((acc, item) => ({
+      ...acc,
+      [item.id]: item.unit,
+    }), {})
+  );
+
   const [status, setStatus] = useState(initialStatus);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -66,12 +82,31 @@ export function QuotationEditor({
     }));
   };
 
+  const handleGstChange = (productId: string, val: string) => {
+    const num = parseFloat(val);
+    setGstOverrides(prev => ({
+      ...prev,
+      [productId]: isNaN(num) ? 0 : Math.max(0, num)
+    }));
+  };
+
+  const handleUnitChange = (productId: string, val: string) => {
+    setUnitOverrides(prev => ({
+      ...prev,
+      [productId]: val
+    }));
+  };
+
   // Live recalculations
   const calculatedItems = initialItems.map(item => {
     const rate = rates[item.id] !== undefined ? rates[item.id] : item.baseRate;
+    const gst = gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : item.gstPercent;
+    const unit = unitOverrides[item.id] !== undefined ? unitOverrides[item.id] : item.unit;
     return {
       ...item,
       currentRate: rate,
+      gstPercent: gst,
+      unit: unit,
       lineTotal: rate * item.qty
     };
   });
@@ -88,7 +123,7 @@ export function QuotationEditor({
     try {
       await onUpdateStatus(newStatus);
       setStatus(newStatus);
-    } catch (e) {
+    } catch {
       alert("Error updating order status");
     } finally {
       setActionLoading(false);
@@ -311,8 +346,24 @@ export function QuotationEditor({
                           {item.qty}
                         </td>
 
-                        <td className="py-3 px-4 text-center text-slate-600">
-                          {item.unit}
+                        {/* Editable Unit */}
+                        <td className="py-3 px-4 text-center">
+                          <div className="print:hidden">
+                            <select
+                              value={unitOverrides[item.id] !== undefined ? unitOverrides[item.id] : item.unit}
+                              onChange={(e) => handleUnitChange(item.id, e.target.value)}
+                              className="h-6 text-xs rounded border border-slate-200 px-1 bg-white text-slate-700 focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="per bundle">per bundle</option>
+                              <option value="per mtr">per mtr</option>
+                              <option value="piece">piece</option>
+                              <option value="per pair">per pair</option>
+                              <option value="per kg">per kg</option>
+                            </select>
+                          </div>
+                          <div className="hidden print:block text-slate-600">
+                            {item.unit}
+                          </div>
                         </td>
 
                         {/* Interactive Rate Edit (Print: plain text) */}
@@ -332,8 +383,23 @@ export function QuotationEditor({
                           </div>
                         </td>
 
-                        <td className="py-3 px-4 text-right text-slate-500">
-                          {item.gstPercent}%
+                        {/* Editable GST % */}
+                        <td className="py-3 px-4 text-right">
+                          <div className="print:hidden inline-flex items-center justify-end gap-1">
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              max="28"
+                              value={gstOverrides[item.id] !== undefined ? gstOverrides[item.id] : item.gstPercent}
+                              onChange={(e) => handleGstChange(item.id, e.target.value)}
+                              className="w-14 h-6 text-right font-bold text-xs rounded border border-slate-200 px-1 focus:ring-1 focus:ring-blue-500"
+                            />
+                            <span className="text-slate-400">%</span>
+                          </div>
+                          <div className="hidden print:block text-slate-500">
+                            {item.gstPercent}%
+                          </div>
                         </td>
 
                         <td className="py-3 px-4 text-right font-bold text-slate-900">
@@ -376,13 +442,13 @@ export function QuotationEditor({
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-600">
-                  <span>CGST (9%):</span>
+                  <span>CGST:</span>
                   <span className="font-semibold text-slate-800">
                     ₹{cgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-600">
-                  <span>SGST (9%):</span>
+                  <span>SGST:</span>
                   <span className="font-semibold text-slate-800">
                     ₹{sgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>

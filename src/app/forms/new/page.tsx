@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,19 +13,11 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Plus, 
   Trash2, 
-  GripVertical, 
   Save, 
   ArrowLeft, 
-  Sparkles,
-  Layers, 
   Building2, 
-  Calendar, 
-  ShieldCheck, 
-  CheckCircle2, 
   ShoppingBag,
-  HelpCircle,
   Copy,
-  SlidersHorizontal,
   FileCheck
 } from 'lucide-react';
 
@@ -78,7 +69,7 @@ export default function FormBuilder() {
   });
 
   const addField = (defaultType = 'TEXT', defaultLabel = 'New Question') => {
-    const newId = Math.random().toString();
+    const newId = crypto.randomUUID();
     setFields([...fields, { 
       id: newId, 
       type: defaultType, 
@@ -101,7 +92,7 @@ export default function FormBuilder() {
   };
 
   const duplicateField = (field: Field) => {
-    const newId = Math.random().toString();
+    const newId = crypto.randomUUID();
     const cloned = { ...field, id: newId, label: `${field.label} (Copy)` };
     const index = fields.findIndex(f => f.id === field.id);
     const updated = [...fields];
@@ -145,7 +136,7 @@ export default function FormBuilder() {
         const error = await res.json();
         alert(error.error || "Failed to save form");
       }
-    } catch (error) {
+    } catch {
       alert("Something went wrong");
     } finally {
       setIsSubmitting(false);

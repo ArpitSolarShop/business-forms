@@ -16,8 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    // 2. Safely generate a highly unique PI Number without using a pure Math.random() that can collide
-    const uniqueHash = Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    // 2. Generate a highly unique PI Number using crypto
+    const uniqueHash = crypto.randomUUID().split('-')[0].toUpperCase() + crypto.randomUUID().split('-')[1].toUpperCase();
     const piNumber = `PI-${new Date().getFullYear()}-${uniqueHash}`;
     // Use transaction to ensure response and all fields are saved
     const response = await prisma.$transaction(async (tx) => {

@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { 
   Loader2, 
@@ -16,10 +15,7 @@ import {
   Building2, 
   ShieldCheck, 
   ArrowRight,
-  FileCheck2,
-  Package,
-  ReceiptText,
-  Printer
+  ReceiptText
 } from 'lucide-react';
 
 type Product = {
@@ -192,7 +188,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
       } else {
         alert("Failed to submit order. Please try again.");
       }
-    } catch (error) {
+    } catch {
       alert("Network error submitting order. Please check your connection.");
     } finally {
       setSubmitting(false);
@@ -289,7 +285,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                 <span className="font-semibold">₹{totals.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>18% GST (CGST 9% + SGST 9%):</span>
+                <span>GST (CGST + SGST):</span>
                 <span className="font-semibold">₹{totals.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-200">
@@ -341,7 +337,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
 
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-medium text-emerald-700">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Live Pricing & 18% GST Auto-Calculated</span>
+            <span>Live Pricing & GST Auto-Calculated</span>
           </div>
         </div>
       </header>
@@ -360,7 +356,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
             Wholesale Material Order Form
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
-            Select your required equipment quantities from the 23 items below. As you enter quantities, your line amounts, 18% GST (CGST/SGST), and total payable are calculated in real-time.
+            Select your required equipment quantities from the items below. As you enter quantities, your line amounts, GST (CGST/SGST), and total payable are calculated in real-time.
           </p>
         </div>
 
@@ -503,7 +499,6 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                 <tbody className="divide-y divide-slate-100">
                   {filteredProducts.map((product, idx) => {
                     const qty = cart[product.id] || 0;
-                    const lineTotal = product.baseRate * qty;
                     const isSelected = qty > 0;
 
                     return (
@@ -670,7 +665,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
           {/* 3. Live Total Calculation Card */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-3">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-              Order Pricing Breakdown (18% GST Compliant)
+              Order Pricing Breakdown (GST Compliant)
             </h3>
 
             <div className="space-y-2 pt-2 border-t border-slate-100 max-w-md ml-auto text-xs">
@@ -685,12 +680,12 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
               </div>
 
               <div className="flex justify-between text-slate-600">
-                <span>CGST (9%):</span>
+                <span>CGST:</span>
                 <span className="font-semibold text-slate-800">₹{totals.cgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
 
               <div className="flex justify-between text-slate-600">
-                <span>SGST (9%):</span>
+                <span>SGST:</span>
                 <span className="font-semibold text-slate-800">₹{totals.sgst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
 
@@ -716,7 +711,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
 
             <div>
               <div className="text-xs font-semibold text-slate-500">
-                {totals.itemsCount} Items ({totals.unitsCount} Units) • +18% GST Included
+                {totals.itemsCount} Items ({totals.unitsCount} Units) • GST Included
               </div>
               <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 ₹{totals.grandTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}

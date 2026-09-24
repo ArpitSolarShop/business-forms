@@ -17,7 +17,8 @@ export function middleware(request: NextRequest) {
 
   // Check PIN for all other routes (Admin Routes)
   const pin = request.cookies.get('admin_pin')?.value;
-  if (pin !== '1911') {
+  const expectedPin = process.env.ADMIN_PIN || '1911';
+  if (pin !== expectedPin) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 

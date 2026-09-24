@@ -65,6 +65,16 @@ export default async function ResponseDetailsPage({ params }: { params: Promise<
   // Server Action to update status
   async function updateStatus(newStatus: string) {
     'use server';
+    const { isAdminAuthenticated } = await import('@/lib/auth');
+    if (!(await isAdminAuthenticated())) {
+      throw new Error('Unauthorized');
+    }
+
+    const allowedStatuses = ['New', 'Order Placed', 'Quoted', 'PI Issued', 'Approved', 'Payment Confirmed', 'Dispatched', 'Cancelled'];
+    if (!allowedStatuses.includes(newStatus)) {
+      throw new Error('Invalid status');
+    }
+
     await prisma.formResponse.update({
       where: { id },
       data: { status: newStatus }

@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { official23Products } from '@/lib/products';
+import { isAdminAuthenticated } from '@/lib/auth';
 
 export async function POST() {
   try {
+    if (!(await isAdminAuthenticated())) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const skusToKeep = official23Products.map(p => p.sku);
 
     // Wrap catalog modifications in a transaction to prevent partial data corruption if an error occurs

@@ -6,9 +6,10 @@ export default function LoginPage() {
   async function login(formData: FormData) {
     'use server';
     const pin = formData.get('pin');
-    if (pin === '1911') {
+    const expectedPin = process.env.ADMIN_PIN || '1911';
+    if (pin === expectedPin) {
       const cookieStore = await cookies();
-      cookieStore.set('admin_pin', '1911', { 
+      cookieStore.set('admin_pin', String(pin), { 
         maxAge: 60 * 60 * 24 * 30, // 30 days
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

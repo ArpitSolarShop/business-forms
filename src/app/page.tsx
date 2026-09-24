@@ -3,12 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { 
   PlusCircle, 
   FileText, 
   ClipboardList, 
-  TrendingUp, 
   Search, 
   Clock, 
   CheckCircle2, 
@@ -18,9 +16,6 @@ import {
   Sparkles,
   Package,
   ShieldCheck,
-  Building2,
-  Calendar,
-  Layers,
   ShoppingBag
 } from 'lucide-react';
 
@@ -227,7 +222,7 @@ export default async function DashboardPage() {
                       try {
                         const parsedCart = JSON.parse(productAnswer.value);
                         itemCount = Object.keys(parsedCart).length;
-                      } catch(e) {}
+                      } catch {}
                     }
 
                     return (
