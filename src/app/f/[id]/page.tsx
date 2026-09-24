@@ -249,17 +249,27 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
 
     // ── Header Band ──
     doc.setFillColor(30, 64, 175); // blue-800
-    doc.rect(0, 0, pageW, 32, 'F');
+    doc.rect(0, 0, pageW, 46, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text(form.organization.name, margin, 14);
-    doc.setFontSize(9);
+    
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
-    doc.text('Proforma Invoice / Order Confirmation', margin, 21);
+    doc.text('GSTIN: 09AAMCK6259J1ZU | CIN: U35105UP2026PTC244522', margin, 20);
+    doc.text('Office: Sh16/114-25-K-2, Sharvodayanagar, Kadipur, Shivpur, Varanasi 221003 (UP), India', margin, 24);
+    doc.text('Warehouse: SH15/243, Bharlai, Shivpur, Varanasi 221003', margin, 28);
+    doc.text('Phone: +91 9044555572 (WhatsApp & Call) | Email: info@krishnanuja.com | Web: www.krishnanuja.com', margin, 32);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Proforma Invoice / Order Confirmation', margin, 41);
+    
+    doc.setFont('helvetica', 'normal');
     doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, pageW - margin, 14, { align: 'right' });
     doc.text(`PI No: ${submittedPi}`, pageW - margin, 21, { align: 'right' });
-    y = 40;
+    y = 54;
 
     // ── Buyer Info Box ──
     doc.setDrawColor(200, 200, 200);

@@ -251,7 +251,8 @@ export function QuotationEditor({
                 <p>Office: Sh16/114-25-K-2, Sharvodayanagar, Kadipur, Shivpur, Varanasi 221003 (UP), India</p>
                 <p>Warehouse: SH15/243, Bharlai, Shivpur, Varanasi 221003</p>
                 <p>GSTIN: 09AAMCK6259J1ZU | CIN: U35105UP2026PTC244522</p>
-                <p>Email: info@krishnanuja.com | Phone: +91 9044555572</p>
+                <p>Email: info@krishnanuja.com | Phone: +91 9044555572 (WhatsApp & Call)</p>
+                <p>Website: www.krishnanuja.com</p>
               </div>
             </div>
 
