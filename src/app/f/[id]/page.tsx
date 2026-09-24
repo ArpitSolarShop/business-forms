@@ -15,8 +15,10 @@ import {
   Building2, 
   ShieldCheck, 
   ArrowRight,
-  ReceiptText
+  ReceiptText,
+  Download
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 type Product = {
   id: string;
@@ -233,6 +235,207 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
   });
 
   // Success Screen
+  // ─── PDF Generation ───
+  const generateOrderPDF = () => {
+    if (!form) return;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const contentW = pageW - margin * 2;
+    let y = 14;
+
+    const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // ── Header Band ──
+    doc.setFillColor(30, 64, 175); // blue-800
+    doc.rect(0, 0, pageW, 32, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(form.organization.name, margin, 14);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Proforma Invoice / Order Confirmation', margin, 21);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`, pageW - margin, 14, { align: 'right' });
+    doc.text(`PI No: ${submittedPi}`, pageW - margin, 21, { align: 'right' });
+    y = 40;
+
+    // ── Buyer Info Box ──
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(margin, y, contentW, deliveryAddress ? 36 : 26, 2, 2, 'FD');
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILL TO / BUYER DETAILS', margin + 4, y + 5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Name / Firm: ${buyerName}`, margin + 4, y + 12);
+    doc.text(`Phone: ${contactNumber}`, pageW - margin - 4, y + 12, { align: 'right' });
+    if (gstin) {
+      doc.text(`GSTIN: ${gstin}`, margin + 4, y + 19);
+    }
+    if (deliveryAddress) {
+      const addrLines = doc.splitTextToSize(`Delivery: ${deliveryAddress}`, contentW - 8);
+      doc.text(addrLines, margin + 4, gstin ? y + 26 : y + 19);
+    }
+    y += (deliveryAddress ? 42 : 32);
+
+    // ── Product Table ──
+    // Table header
+    const cols = [
+      { label: 'S.No', w: 10, align: 'center' as const },
+      { label: 'Item Description', w: 52, align: 'left' as const },
+      { label: 'Unit', w: 18, align: 'center' as const },
+      { label: 'Base Rate', w: 22, align: 'right' as const },
+      { label: 'GST %', w: 14, align: 'center' as const },
+      { label: 'Qty', w: 12, align: 'center' as const },
+      { label: 'Tax Amt', w: 22, align: 'right' as const },
+      { label: 'Line Total', w: 24, align: 'right' as const },
+    ];
+    // Adjust last column to fill remaining width
+    const totalColW = cols.reduce((s, c) => s + c.w, 0);
+    if (totalColW < contentW) cols[cols.length - 1].w += contentW - totalColW;
+
+    // Header row
+    doc.setFillColor(241, 245, 249);
+    doc.rect(margin, y, contentW, 8, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y + 8, margin + contentW, y + 8);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(71, 85, 105);
+    let colX = margin;
+    cols.forEach(col => {
+      const textX = col.align === 'right' ? colX + col.w - 2 : col.align === 'center' ? colX + col.w / 2 : colX + 2;
+      doc.text(col.label, textX, y + 5.5, { align: col.align });
+      colX += col.w;
+    });
+    y += 8;
+
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    let rowIndex = 0;
+    const orderedProducts = (form.products || []).filter(p => (cart[p.id] || 0) > 0);
+    orderedProducts.forEach((product) => {
+      const qty = cart[product.id] || 0;
+      if (qty <= 0) return;
+
+      const lineBase = product.baseRate * qty;
+      const lineTax = lineBase * (product.gstPercent / 100);
+      const lineTotal = lineBase + lineTax;
+      rowIndex++;
+
+      // Check for page break
+      if (y + 8 > doc.internal.pageSize.getHeight() - 50) {
+        doc.addPage();
+        y = 14;
+      }
+
+      // Zebra stripe
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(margin, y, contentW, 7, 'F');
+      }
+
+      doc.setTextColor(30, 41, 59);
+      colX = margin;
+      const rowData = [
+        { text: String(rowIndex), align: 'center' as const },
+        { text: product.name, align: 'left' as const },
+        { text: product.unit, align: 'center' as const },
+        { text: `Rs.${fmt(product.baseRate)}`, align: 'right' as const },
+        { text: `${product.gstPercent}%`, align: 'center' as const },
+        { text: String(qty), align: 'center' as const },
+        { text: `Rs.${fmt(lineTax)}`, align: 'right' as const },
+        { text: `Rs.${fmt(lineTotal)}`, align: 'right' as const },
+      ];
+
+      rowData.forEach((cell, i) => {
+        const col = cols[i];
+        const textX = cell.align === 'right' ? colX + col.w - 2 : cell.align === 'center' ? colX + col.w / 2 : colX + 2;
+        // Truncate long text
+        let cellText = cell.text;
+        if (i === 1 && doc.getTextWidth(cellText) > col.w - 4) {
+          while (doc.getTextWidth(cellText + '...') > col.w - 4 && cellText.length > 3) {
+            cellText = cellText.slice(0, -1);
+          }
+          cellText += '...';
+        }
+        doc.text(cellText, textX, y + 5, { align: cell.align });
+        colX += col.w;
+      });
+      y += 7;
+    });
+
+    // Table bottom line
+    doc.setDrawColor(203, 213, 225);
+    doc.line(margin, y, margin + contentW, y);
+    y += 6;
+
+    // ── Totals Box ──
+    const totalsBoxW = 80;
+    const totalsX = pageW - margin - totalsBoxW;
+
+    // Check for page break
+    if (y + 40 > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      y = 14;
+    }
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(totalsX, y, totalsBoxW, 34, 2, 2, 'FD');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Taxable Subtotal:', totalsX + 4, y + 7);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Rs.${fmt(totals.subtotal)}`, totalsX + totalsBoxW - 4, y + 7, { align: 'right' });
+
+    doc.setTextColor(100, 116, 139);
+    doc.text(`CGST:`, totalsX + 4, y + 13);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Rs.${fmt(totals.cgst)}`, totalsX + totalsBoxW - 4, y + 13, { align: 'right' });
+
+    doc.setTextColor(100, 116, 139);
+    doc.text(`SGST:`, totalsX + 4, y + 19);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Rs.${fmt(totals.sgst)}`, totalsX + totalsBoxW - 4, y + 19, { align: 'right' });
+
+    // Divider
+    doc.setDrawColor(30, 41, 59);
+    doc.setLineWidth(0.5);
+    doc.line(totalsX + 4, y + 23, totalsX + totalsBoxW - 4, y + 23);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 64, 175);
+    doc.text('Total Payable:', totalsX + 4, y + 30);
+    doc.text(`Rs.${fmt(totals.grandTotal)}`, totalsX + totalsBoxW - 4, y + 30, { align: 'right' });
+
+    y += 42;
+
+    // ── Footer Note ──
+    if (y + 20 > doc.internal.pageSize.getHeight() - 10) {
+      doc.addPage();
+      y = 14;
+    }
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(148, 163, 184);
+    doc.text('This is a system-generated proforma invoice. Prices are subject to change. For queries, contact our sales desk.', margin, y);
+    doc.text(`Generated on ${new Date().toLocaleString('en-IN')}`, margin, y + 5);
+
+    // Save
+    doc.save(`Order_${submittedPi}_${buyerName.replace(/\s+/g, '_')}.pdf`);
+  };
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 font-sans">
@@ -299,21 +502,32 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
             Our dispatch desk has logged this order. You will receive an official dispatch schedule and payment confirmation call shortly.
           </p>
 
-          <Button 
-            onClick={() => {
-              setSubmitted(false);
-              setCart({});
-              setBuyerName('');
-              setContactNumber('');
-              setDeliveryAddress('');
-              setGstin('');
-              setAdditionalNotes('');
-            }}
-            variant="outline"
-            className="rounded-xl text-xs"
-          >
-            Place Another Order
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <Button 
+              onClick={generateOrderPDF}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold h-10 px-5 shadow-sm shadow-blue-200 flex items-center justify-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Order PDF
+            </Button>
+
+            <Button 
+              onClick={() => {
+                setSubmitted(false);
+                setCart({});
+                setBuyerName('');
+                setContactNumber('');
+                setDeliveryAddress('');
+                setGstin('');
+                setAdditionalNotes('');
+              }}
+              variant="outline"
+              className="w-full sm:w-auto rounded-xl text-xs h-10 px-5"
+            >
+              Place Another Order
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -490,16 +704,20 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                     <th className="py-3 px-4">Item Description</th>
                     <th className="py-3 px-4 text-center">Unit</th>
                     <th className="py-3 px-4 text-right">Base Rate (₹)</th>
-                    <th className="py-3 px-4 text-center">GST</th>
-                    <th className="py-3 px-4 text-right">Final Rate (₹)</th>
+                    <th className="py-3 px-4 text-center">GST %</th>
+                    <th className="py-3 px-4 text-right">Rate incl. GST (₹)</th>
                     <th className="py-3 px-4 text-center w-32">Quantity</th>
-                    <th className="py-3 px-4 text-right">Total w/ GST (₹)</th>
+                    <th className="py-3 px-4 text-right">Tax Amt (₹)</th>
+                    <th className="py-3 px-4 text-right">Line Total (₹)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredProducts.map((product, idx) => {
                     const qty = cart[product.id] || 0;
                     const isSelected = qty > 0;
+                    const lineBase = product.baseRate * qty;
+                    const lineTax = lineBase * (product.gstPercent / 100);
+                    const lineTotal = lineBase + lineTax;
 
                     return (
                       <tr 
@@ -538,7 +756,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                           {product.gstPercent}%
                         </td>
 
-                        {/* Final Rate */}
+                        {/* Rate incl. GST */}
                         <td className="py-3 px-4 text-right font-bold text-blue-700 whitespace-nowrap">
                           ₹{(product.baseRate * (1 + product.gstPercent / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
@@ -574,11 +792,22 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                           </div>
                         </td>
 
+                        {/* Per-Product Tax Amount */}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          {qty > 0 ? (
+                            <span className="text-amber-700 font-semibold text-[11px] bg-amber-50 px-1.5 py-0.5 rounded">
+                              ₹{lineTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+
                         {/* Line Total */}
                         <td className="py-3 px-4 text-right font-bold whitespace-nowrap">
                           {qty > 0 ? (
                             <span className="text-blue-700 text-sm">
-                              ₹{(product.baseRate * (1 + product.gstPercent / 100) * qty).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₹{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           ) : (
                             <span className="text-slate-300">—</span>
@@ -597,6 +826,9 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                 const qty = cart[product.id] || 0;
                 const isSelected = qty > 0;
                 const finalRate = product.baseRate * (1 + product.gstPercent / 100);
+                const lineBase = product.baseRate * qty;
+                const lineTax = lineBase * (product.gstPercent / 100);
+                const lineTotal = lineBase + lineTax;
 
                 return (
                   <div key={product.id} className={`p-4 rounded-xl border transition-colors ${isSelected ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-white'}`}>
@@ -606,7 +838,7 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                         <p className="text-[10px] text-slate-500 font-mono mt-1">{product.sku} • {product.category}</p>
                       </div>
                       <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg shrink-0">
-                        ₹{finalRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{finalRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/{product.unit.replace('per ', '')}
                       </span>
                     </div>
                     
@@ -646,13 +878,21 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
                         </div>
                       </div>
 
-                      {/* Mobile Line Total */}
+                      {/* Mobile Tax & Line Total */}
                       {qty > 0 && (
-                        <div className="flex items-center justify-between bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
-                          <span className="text-xs font-semibold text-blue-800">Item Total</span>
-                          <span className="text-sm font-extrabold text-blue-700">
-                            ₹{(finalRate * qty).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between bg-amber-50/60 p-2 rounded-lg border border-amber-100/50">
+                            <span className="text-[11px] font-semibold text-amber-800">GST Tax ({product.gstPercent}%)</span>
+                            <span className="text-xs font-bold text-amber-700">
+                              ₹{lineTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
+                            <span className="text-xs font-semibold text-blue-800">Line Total (incl. GST)</span>
+                            <span className="text-sm font-extrabold text-blue-700">
+                              ₹{lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
