@@ -354,6 +354,7 @@ export function QuotationEditor({
                               onChange={(e) => handleUnitChange(item.id, e.target.value)}
                               className="h-6 text-xs rounded border border-slate-200 px-1 bg-white text-slate-700 focus:ring-1 focus:ring-blue-500"
                             >
+                              <option value="Coil">Coil</option>
                               <option value="per bundle">per bundle</option>
                               <option value="per meter">per meter</option>
                               <option value="per mtr">per mtr</option>
