@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -236,8 +237,23 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
 
   // Success Screen
   // ─── PDF Generation ───
-  const generateOrderPDF = () => {
+  const generateOrderPDF = async () => {
     if (!form) return;
+
+    // Load logo as base64
+    const logoBase64 = await new Promise<string>((resolve) => {
+      const img = new window.Image();
+      img.src = '/logo.png';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve('');
+    });
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -248,12 +264,19 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
     const fmt = (n: number) => n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // ── Header Band ──
-    doc.setFillColor(30, 64, 175); // blue-800
+    doc.setFillColor(0, 0, 0); // black background as per the logo
     doc.rect(0, 0, pageW, 46, 'F');
+    
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', margin, 5, 45, 14, '', 'FAST'); // Scale nicely
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(form.organization.name, margin, 14);
+    }
+    
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(form.organization.name, margin, 14);
     
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
@@ -550,8 +573,8 @@ export default function FormViewer({ params }: { params: Promise<{ id: string }>
       <header className="border-b border-slate-200 bg-white sticky top-0 z-30 shadow-xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
-              <Building2 className="h-4 w-4" />
+            <div className="h-10 rounded-sm overflow-hidden flex items-center justify-center bg-black px-2 shadow-xs">
+              <Image src="/logo.png" alt="Logo" width={120} height={40} className="object-contain h-full w-auto" />
             </div>
             <div>
               <span className="font-bold text-slate-900 text-sm block leading-none">{form.organization.name}</span>
